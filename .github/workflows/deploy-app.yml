@@ -1,0 +1,132 @@
+name: Terraform Infrastructure
+
+on:
+  workflow_dispatch:
+
+jobs:
+  
+  build-and-push-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Login to Docker Hub
+        run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+      - name: Build and push frontend
+        run: |
+          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/movie-review-frontend:latest ./frontend
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/movie-review-frontend:latest
+
+  build-and-push-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Login to Docker Hub
+        run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+      - name: Build and push backend
+        run: |
+          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/movie-review-backend:latest ./backend
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/movie-review-backend:latest
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [build-and-push-frontend, build-and-push-backend]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Ansible
+        run: ansible.sh
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Write SSH key to disk
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/connect.pem
+          chmod 600 ~/.ssh/connect.pem
+
+      - name: Write Ansible inventory
+        run: |
+          cat > ansible/inventory.ini << EOF
+          [web]
+          web-server ansible_host=${{ secrets.WEB_INSTANCE_IP }}
+
+          [app]
+          app-server ansible_host=${{ secrets.APP_INSTANCE_IP }}
+
+          [web:vars]
+          ansible_user=ubuntu
+          ansible_ssh_private_key_file=~/.ssh/connect.pem
+
+          [app:vars]
+          ansible_user=ubuntu
+          ansible_ssh_private_key_file=~/.ssh/connect.pem
+          ansible_ssh_common_args='-o StrictHostKeyChecking=no -o ProxyJump=ubuntu@${{ secrets.WEB_INSTANCE_IP }}'
+          EOF
+
+      - name: Write Ansible group_vars
+        run: |
+          cat > ansible/group_vars/all.yml << EOF
+          repo_url: "https://github.com/${{ github.repository }}.git"
+          ssh_private_key: "{{ lookup('env', 'SSH_PRIVATE_KEY') }}"
+          app_private_ip: "${{ secrets.APP_INSTANCE_IP }}"
+          frontend_image: "${{ secrets.DOCKERHUB_USERNAME }}/movie-review-frontend:latest"
+          backend_image: "${{ secrets.DOCKERHUB_USERNAME }}/movie-review-backend:latest"
+          db_host: "${{ secrets.DB_HOST }}"
+          db_port: "3306"
+          db_name: "movie_reviews"
+          db_user: "${{ secrets.DB_USERNAME }}"
+          db_password: "{{ lookup('env', 'DB_PASSWORD') }}"
+          internal_alb_dns: "${{ secrets.INTERNAL_ALB_DNS }}"
+          public_alb_dns: "${{ secrets.PUBLIC_ALB_DNS }}"
+          EOF
+
+
+      # Step 1 — Get the runner's current public IP
+      - name: Get runner public IP
+        id: ip
+        run: echo "runner_ip=$(curl -s ifconfig.me)/32" >> $GITHUB_OUTPUT
+        # This just curls ifconfig.me and saves the result e.g. "54.21.33.10/32"
+
+      # Step 2 — Add that IP to your web SG on port 22
+      - name: Add runner IP to web SG
+        run: |
+          aws ec2 authorize-security-group-ingress \
+            --group-id ${{ secrets.WEB_SG_ID }} \
+            --protocol tcp \
+            --port 22 \
+            --cidr ${{ steps.ip.outputs.runner_ip }}
+        #env:
+        #  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        #  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        #  AWS_DEFAULT_REGION: us-east-1
+        # This temporarily punches a hole in the SG just for this runner
+
+      # Step 3 — Run your Ansible playbook
+      - name: Run Ansible
+        run: |
+          ansible-playbook -i ansible/inventory.ini ansible/deploy.yml
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          ANSIBLE_HOST_KEY_CHECKING: "False"
+          
+        # ProxyJump is configured in inventory.ini
+        # Runner → Web EC2 → App EC2
+
+      # Step 4 — Remove the runner IP from the SG when done
+      # The 'if: always()' means this runs even if Ansible fails
+      - name: Remove runner IP from web SG
+        if: always()
+        run: |
+          aws ec2 revoke-security-group-ingress \
+            --group-id ${{ secrets.WEB_SG_ID }} \
+            --protocol tcp \
+            --port 22 \
+            --cidr ${{ steps.ip.outputs.runner_ip }}
