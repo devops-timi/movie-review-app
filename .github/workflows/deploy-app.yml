@@ -35,8 +35,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Ansible
-        run: ansible.sh
+      - name: Install Ansible and Docker collection
+        run: |
+          sudo apt update
+          sudo apt install -y ansible
+          ansible-galaxy collection install community.docker
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
