@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { notFound } from 'next/navigation';
 import { getMovie, getReviews } from '@/lib/api';
 import { formatDuration, formatDate, ratingColor } from '@/lib/utils';

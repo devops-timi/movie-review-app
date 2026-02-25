@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { getMovies, getGenres } from '@/lib/api';
 import MovieCard from '@/components/ui/MovieCard';
 import Link from 'next/link';
