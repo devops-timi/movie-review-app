@@ -99,20 +99,6 @@
       register: nginx_test
       changed_when: false
 
-    - name: restart docker
-      systemd:
-        name: docker
-        state: restarted
-      listen: restart docker
-
-    - name: Create app deployment directory
-      file:
-        path: /home/ubuntu/deploy-nodeapp-with-nginx
-        state: directory
-        owner: ubuntu
-        group: ubuntu
-        mode: '0755'
-
     - name: Pull frontend image from Docker Hub
       community.docker.docker_image:
         name: "{{ frontend_image }}"
