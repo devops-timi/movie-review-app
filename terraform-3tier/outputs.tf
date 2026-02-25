@@ -13,11 +13,6 @@ output "rds_primary_endpoint" {
   value       = module.rds.db_endpoint
 }
 
-output "rds_replica_endpoint" {
-  description = "Read replica endpoint"
-  value       = module.rds.db_replica_endpoint
-}
-
 output "vpc_id" {
   value = module.vpc.vpc_id
 }

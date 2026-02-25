@@ -36,20 +36,3 @@ resource "aws_db_instance" "primary" {
 
   tags = { Name = "${var.project_name}-mysql-primary" }
 }
-
-# ────────────────────────────────────────────
-# Read Replica
-# ────────────────────────────────────────────
-resource "aws_db_instance" "replica" {
-  identifier          = "${var.project_name}-mysql-replica"
-  replicate_source_db = aws_db_instance.primary.identifier
-  instance_class      = var.db_instance_class
-  storage_encrypted   = false
-
-  vpc_security_group_ids = [var.db_sg_id]
-  publicly_accessible    = false
-  skip_final_snapshot    = true
-
-  # Replicas inherit engine, storage, and subnet group from the primary
-  tags = { Name = "${var.project_name}-mysql-replica" }
-}
