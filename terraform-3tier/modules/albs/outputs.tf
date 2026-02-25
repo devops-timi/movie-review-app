@@ -1,15 +1,15 @@
-output "public_alb_dns" {
-    value = aws_lb.public.dns_name 
+output "public_clb_dns" {
+  value = aws_elb.public.dns_name
 }
 
-output "internal_alb_dns" {
-    value = aws_lb.internal.dns_name 
+output "internal_clb_dns" {
+  value = aws_elb.internal.dns_name
 }
 
-output "web_target_group_arn" {
-    value = aws_lb_target_group.web.arn 
+output "public_clb_name" {
+  value = aws_elb.public.name
 }
 
-output "app_target_group_arn" { 
-    value = aws_lb_target_group.app.arn 
+output "internal_clb_name" {
+  value = aws_elb.internal.name
 }

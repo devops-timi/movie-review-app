@@ -24,22 +24,23 @@ jobs:
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
 
       - name: Terraform Init
         run: terraform init
 
-      - name: Force unlock state
-        run: terraform force-unlock -force 59cc3868-f24b-23bf-8f6d-35124042e4ff
+
 
       - name: Terraform Plan
-        run: terraform plan
+        run: terraform plan 
         env:
           TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
           TF_VAR_db_username: ${{ secrets.DB_USERNAME }}
           TF_VAR_key_name: ${{ secrets.KEY_NAME }}
 
       - name: Terraform Apply
-        run: terraform apply -auto-approve
+        run: terraform apply -auto-approve 
         env:
           TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
           TF_VAR_db_username: ${{ secrets.DB_USERNAME }}
@@ -51,17 +52,17 @@ jobs:
           echo "web_ip=$(terraform output -raw web_instance_ip)" >> $GITHUB_OUTPUT
           echo "app_ip=$(terraform output -raw app_instance_ip)" >> $GITHUB_OUTPUT
           echo "rds=$(terraform output -raw rds_primary_endpoint)" >> $GITHUB_OUTPUT
-          echo "pub_alb=$(terraform output -raw public_alb_dns)" >> $GITHUB_OUTPUT
-          echo "int_alb=$(terraform output -raw internal_alb_dns)" >> $GITHUB_OUTPUT
+          echo "pub_clb=$(terraform output -raw public_clb_dns)" >> $GITHUB_OUTPUT
+          echo "int_clb=$(terraform output -raw internal_clb_dns)" >> $GITHUB_OUTPUT
           echo "web_sg=$(terraform output -raw web_sg_id)" >> $GITHUB_OUTPUT
 
       - name: Write outputs to GitHub Secrets
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
-          gh secret set WEB_INSTANCE_IP --body "${{ steps.tf.outputs.web_ip }}"
-          gh secret set APP_INSTANCE_IP --body "${{ steps.tf.outputs.app_ip }}"
-          gh secret set DB_HOST         --body "${{ steps.tf.outputs.rds }}"
-          gh secret set PUBLIC_ALB_DNS  --body "${{ steps.tf.outputs.pub_alb }}"
-          gh secret set INTERNAL_ALB_DNS --body "${{ steps.tf.outputs.int_alb }}"
-          gh secret set WEB_SG_ID       --body "${{ steps.tf.outputs.web_sg }}"
+          gh secret set WEB_INSTANCE_IP  --body "${{ steps.tf.outputs.web_ip }}"
+          gh secret set APP_INSTANCE_IP  --body "${{ steps.tf.outputs.app_ip }}"
+          gh secret set DB_HOST          --body "${{ steps.tf.outputs.rds }}"
+          gh secret set PUBLIC_CLB_DNS   --body "${{ steps.tf.outputs.pub_clb }}"
+          gh secret set INTERNAL_CLB_DNS --body "${{ steps.tf.outputs.int_clb }}"
+          gh secret set WEB_SG_ID        --body "${{ steps.tf.outputs.web_sg }}"

@@ -18,12 +18,12 @@ variable "app_sg_id" {
     type = string 
 }
 
-variable "web_target_group_arn" {
-    type = string 
+variable "public_clb_name" {
+  type = string
 }
 
-variable "app_target_group_arn" {
-    type = string 
+variable "internal_clb_name" {
+  type = string
 }
 
 variable "key_name" {

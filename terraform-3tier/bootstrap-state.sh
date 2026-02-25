@@ -7,7 +7,7 @@ AWS_REGION="us-east-1"
 
 # Create S3 bucket for Terraform state (MUST be globally unique)
 # Replace with your own unique name
-BUCKET_NAME="movie-review-app-state"
+BUCKET_NAME="movie-review-state"
 
 aws s3api create-bucket \
   --bucket $BUCKET_NAME \
@@ -37,7 +37,7 @@ aws s3api put-public-access-block \
 
 # Create DynamoDB table for state locking
 aws dynamodb create-table \
-  --table-name movie-review-state-lock \
+  --table-name movie-review-lock \
   --attribute-definitions AttributeName=LockID,AttributeType=S \
   --key-schema AttributeName=LockID,KeyType=HASH \
   --billing-mode PAY_PER_REQUEST \

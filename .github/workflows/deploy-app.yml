@@ -83,8 +83,8 @@ jobs:
           db_name: "movie_reviews"
           db_user: "${{ secrets.DB_USERNAME }}"
           db_password: "{{ lookup('env', 'DB_PASSWORD') }}"
-          internal_alb_dns: "${{ secrets.INTERNAL_ALB_DNS }}"
-          public_alb_dns: "${{ secrets.PUBLIC_ALB_DNS }}"
+          internal_clb_dns: "${{ secrets.INTERNAL_CLB_DNS }}"
+          public_clb_dns: "${{ secrets.PUBLIC_CLB_DNS }}"
           EOF
 
 

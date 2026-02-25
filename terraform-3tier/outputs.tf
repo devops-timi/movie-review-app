@@ -1,11 +1,11 @@
-output "public_alb_dns" {
-  description = "DNS name of the public-facing ALB (frontend)"
-  value       = module.alb.public_alb_dns
+output "public_clb_dns" {
+  description = "DNS name of the public-facing CLB (frontend)"
+  value       = module.alb.public_clb_dns
 }
 
-output "internal_alb_dns" {
-  description = "DNS name of the internal ALB (app tier)"
-  value       = module.alb.internal_alb_dns
+output "internal_clb_dns" {
+  description = "DNS name of the internal CLB (app tier)"
+  value       = module.alb.internal_clb_dns
 }
 
 output "rds_primary_endpoint" {

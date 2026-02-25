@@ -62,8 +62,8 @@ module "ec2" {
   app_subnet_ids        = module.vpc.app_subnet_ids
   web_sg_id             = module.security_groups.web_sg_id
   app_sg_id             = module.security_groups.app_sg_id
-  web_target_group_arn  = module.alb.web_target_group_arn
-  app_target_group_arn  = module.alb.app_target_group_arn
+  public_clb_name       = module.alb.public_clb_name
+  internal_clb_name     = module.alb.internal_clb_name
   key_name              = var.key_name
   web_instance_type     = var.web_instance_type
   app_instance_type     = var.app_instance_type

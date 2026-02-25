@@ -14,11 +14,10 @@ resource "aws_instance" "web" {
   tags = { Name = "${var.project_name}-web-${count.index + 1}", Tier = "web" }
 }
 
-resource "aws_lb_target_group_attachment" "web" {
-  count            = length(aws_instance.web)
-  target_group_arn = var.web_target_group_arn
-  target_id        = aws_instance.web[count.index].id
-  port             = 80
+resource "aws_elb_attachment" "web" {
+  count    = length(aws_instance.web)
+  elb      = var.public_clb_name
+  instance = aws_instance.web[count.index].id
 }
 
 # ────────────────────────────────────────────
@@ -37,9 +36,8 @@ resource "aws_instance" "app" {
   tags = { Name = "${var.project_name}-app-${count.index + 1}", Tier = "app" }
 }
 
-resource "aws_lb_target_group_attachment" "app" {
-  count            = length(aws_instance.app)
-  target_group_arn = var.app_target_group_arn
-  target_id        = aws_instance.app[count.index].id
-  port             = 3010
+resource "aws_elb_attachment" "app" {
+  count    = length(aws_instance.app)
+  elb      = var.internal_clb_name
+  instance = aws_instance.app[count.index].id
 }

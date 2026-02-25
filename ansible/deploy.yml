@@ -113,7 +113,7 @@
         ports:
           - "3000:3000"
         env:
-          NEXT_PUBLIC_API_URL: "http://{{ internal_alb_dns }}:3010"
+          NEXT_PUBLIC_API_URL: "http://{{ internal_clb_dns }}:3010"
           NODE_ENV: "production"
 
     # ── Send SQL files to app instance ───────────
@@ -247,7 +247,7 @@
           DB_USER: "{{ db_user }}"
           DB_PASSWORD: "{{ db_password }}"
           DB_NAME: "{{ db_name }}"
-          CORS_ORIGIN: "http://{{ public_alb_dns }}"
+          CORS_ORIGIN: "http://{{ public_clb_dns }}"
 
     - name: Clean up tar file
       file:
