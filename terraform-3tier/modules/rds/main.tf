@@ -16,7 +16,7 @@ resource "aws_db_instance" "primary" {
   engine                  = "mysql"
   engine_version          = "8.4"
   instance_class          = var.db_instance_class
-  allocated_storage       = 400
+  allocated_storage       = 20
   storage_type            = "gp2"
   storage_encrypted       = false
 
@@ -31,7 +31,7 @@ resource "aws_db_instance" "primary" {
   publicly_accessible    = false
   deletion_protection    = false        # Set true in production
   skip_final_snapshot    = true         # Set false in production
-  backup_retention_period = 7
+  backup_retention_period = 0
   maintenance_window      = "Mon:04:00-Mon:05:00"
 
   tags = { Name = "${var.project_name}-mysql-primary" }
