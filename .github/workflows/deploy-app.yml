@@ -1,4 +1,4 @@
-name: Terraform Infrastructure
+name: Configure Terraform Infrastructure
 
 on:
   workflow_dispatch:
