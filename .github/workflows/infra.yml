@@ -39,7 +39,6 @@ jobs:
 
       - name: Terraform Apply
         run: terraform apply -auto-approve
-        working-directory: terraform-3tier
         env:
           TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
           TF_VAR_db_username: ${{ secrets.DB_USERNAME }}
@@ -53,8 +52,6 @@ jobs:
           echo "pub_alb=$(terraform output -raw public_alb_dns)" >> $GITHUB_OUTPUT
           echo "int_alb=$(terraform output -raw internal_alb_dns)" >> $GITHUB_OUTPUT
           echo "web_sg=$(terraform output -raw web_sg_id)" >> $GITHUB_OUTPUT
-
-        working-directory: terraform-3tier
 
       - name: Write outputs to GitHub Secrets
         env:
