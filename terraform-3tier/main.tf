@@ -41,7 +41,7 @@ module "security_groups" {
 # LOAD BALANCERS
 # ─────────────────────────────────────────────
 module "alb" {
-  source = "./modules/alb"
+  source = "./modules/albs"
 
   project_name        = var.project_name
   vpc_id              = module.vpc.vpc_id
