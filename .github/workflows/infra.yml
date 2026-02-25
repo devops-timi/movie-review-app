@@ -25,11 +25,11 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
-      - name: Force unlock state
-        run: terraform force-unlock -force aed50d4d-eac0-3282-4d20-5391b7c2a829
-
       - name: Terraform Init
         run: terraform init
+
+      - name: Force unlock state
+        run: terraform force-unlock -force aed50d4d-eac0-3282-4d20-5391b7c2a829
 
       - name: Terraform Plan
         run: terraform plan
