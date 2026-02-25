@@ -75,6 +75,7 @@ jobs:
 
       - name: Write Ansible group_vars
         run: |
+          mkdir -p ansible/group_vars
           cat > ansible/group_vars/all.yml << EOF
           repo_url: "https://github.com/${{ github.repository }}.git"
           ssh_private_key: "{{ lookup('env', 'SSH_PRIVATE_KEY') }}"
