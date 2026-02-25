@@ -172,15 +172,6 @@
             /tmp/backend.tar \
             ubuntu@{{ app_private_ip }}:/tmp/backend.tar
 
-    - name: Clean up tar and SSH key from web instance
-      file:
-        path: "{{ item }}"
-        state: absent
-      loop:
-        - /tmp/backend.tar
-        - /home/ubuntu/.ssh/connect.pem
-      # Clean up sensitive files and large files after transfer
-
   handlers:
     - name: restart nginx
       systemd:
@@ -253,7 +244,9 @@
       file:
         path: /tmp/backend.tar
         state: absent
-
+      loop:
+        - /tmp/backend.tar
+        - /home/ubuntu/.ssh/connect.pem
 # ─────────────────────────────────────────────
 # DATABASE
 # Runs from the app instance → RDS
