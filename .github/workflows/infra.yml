@@ -49,8 +49,8 @@ jobs:
       - name: Capture Terraform outputs
         id: tf
         run: |
-          echo "web_ip=$(terraform output -raw web_instance_ip)" >> $GITHUB_OUTPUT
-          echo "app_ip=$(terraform output -raw app_instance_ip)" >> $GITHUB_OUTPUT
+          echo "web_ips=$(terraform output -json web_instance_ips)" >> $GITHUB_OUTPUT
+          echo "app_ips=$(terraform output -json app_instance_ips)" >> $GITHUB_OUTPUT
           echo "rds=$(terraform output -raw rds_primary_endpoint)" >> $GITHUB_OUTPUT
           echo "pub_clb=$(terraform output -raw public_clb_dns)" >> $GITHUB_OUTPUT
           echo "int_clb=$(terraform output -raw internal_clb_dns)" >> $GITHUB_OUTPUT
@@ -60,8 +60,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
-          gh secret set WEB_INSTANCE_IP  --body "${{ steps.tf.outputs.web_ip }}"
-          gh secret set APP_INSTANCE_IP  --body "${{ steps.tf.outputs.app_ip }}"
+          gh secret set WEB_INSTANCE_IPS --body "${{ steps.tf.outputs.web_ips }}"
+          gh secret set APP_INSTANCE_IPS --body "${{ steps.tf.outputs.app_ips }}"
           gh secret set DB_HOST          --body "${{ steps.tf.outputs.rds }}"
           gh secret set PUBLIC_CLB_DNS   --body "${{ steps.tf.outputs.pub_clb }}"
           gh secret set INTERNAL_CLB_DNS --body "${{ steps.tf.outputs.int_clb }}"

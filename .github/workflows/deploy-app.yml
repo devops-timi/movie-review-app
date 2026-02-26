@@ -56,22 +56,25 @@ jobs:
 
       - name: Write Ansible inventory
         run: |
-          cat > ansible/inventory.ini << EOF
-          [web]
-          web-server ansible_host=${{ secrets.WEB_INSTANCE_IP }}
-
-          [app]
-          app-server ansible_host=${{ secrets.APP_INSTANCE_IP }}
-
-          [web:vars]
-          ansible_user=ubuntu
-          ansible_ssh_private_key_file=~/.ssh/connect.pem
-
-          [app:vars]
-          ansible_user=ubuntu
-          ansible_ssh_private_key_file=~/.ssh/connect.pem
-          ansible_ssh_common_args='-o StrictHostKeyChecking=no -o ProxyJump=ubuntu@${{ secrets.WEB_INSTANCE_IP }}'
-          EOF
+          {
+            echo "[web]"
+            echo '${{ secrets.WEB_INSTANCE_IPS }}' | jq -r 'to_entries[] | "web-\(.key+1) ansible_host=\(.value)"'
+            echo ""
+            echo "[app]"
+            echo '${{ secrets.APP_INSTANCE_IPS }}' | jq -r 'to_entries[] | "app-\(.key+1) ansible_host=\(.value)"'
+            echo ""
+            echo "[web:vars]"
+            echo "ansible_user=ubuntu"
+            echo "ansible_ssh_private_key_file=~/.ssh/connect.pem"
+            echo "ansible_ssh_common_args='-o StrictHostKeyChecking=no'"
+            echo ""
+            echo "[app:vars]"
+            echo "ansible_user=ubuntu"
+            echo "ansible_ssh_private_key_file=~/.ssh/connect.pem"
+            echo "ansible_ssh_common_args='-o StrictHostKeyChecking=no -o ProxyJump=ubuntu@$(echo \$WEB_IPS | jq -r '.[0]')'"
+          } > ansible/inventory.ini
+        env:
+          WEB_IPS: ${{ secrets.WEB_INSTANCE_IPS }}
 
       - name: Write Ansible group_vars
         run: |

@@ -22,13 +22,13 @@ output "web_sg_id" {
   value       = module.security_groups.web_sg_id
 }
 
-output "web_instance_ip" {
+output "web_instance_ips" {
   description = "Public IP of web EC2 instance"
-  value       = module.ec2.web_public_ips[0]
+  value       = module.ec2.web_public_ips
 }
 
-output "app_instance_ip" {
+output "app_instance_ips" {
   description = "Private IP of app EC2 instance"
-  value       = module.ec2.app_private_ips[0]
+  value       = module.ec2.app_private_ips
 }
 
