@@ -109,6 +109,7 @@
 
     - name: Build frontend
       shell: |
+        export NEXT_PUBLIC_API_URL="http://{{ internal_clb_dns }}:3010"
         cd /app/frontend && npm run build
       environment:
         NEXT_PUBLIC_API_URL: "http://{{ internal_clb_dns }}:3010"
