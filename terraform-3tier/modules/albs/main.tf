@@ -43,7 +43,7 @@ resource "aws_elb" "internal" {
   }
 
   health_check {
-    target              = "HTTP:3010/health"
+    target              = "HTTP:3010/api/health"
     healthy_threshold   = 2
     unhealthy_threshold = 3
     interval            = 30
