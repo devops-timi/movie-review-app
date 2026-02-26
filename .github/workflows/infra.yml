@@ -56,3 +56,7 @@ jobs:
           gh secret set PUBLIC_CLB_DNS   --body "$(terraform output -raw public_clb_dns)"
           gh secret set INTERNAL_CLB_DNS --body "$(terraform output -raw internal_clb_dns)"
           gh secret set WEB_SG_ID        --body "$(terraform output -raw web_sg_id)"
+
+      - name: Debug IPs
+        run: |
+          echo '${{ secrets.WEB_INSTANCE_IPS }}' | od -c | head
