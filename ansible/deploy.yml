@@ -131,22 +131,24 @@
       # which reads it from the environment (GitHub secret)
       # mode 0600 = only owner can read — required by SSH
 
-    - name: SCP schema.sql to app instance
+    - name: SCP schema.sql to all app instances
       shell: |
         scp -i /home/ubuntu/.ssh/connect.pem \
             -o StrictHostKeyChecking=no \
             /app/database/schema.sql \
-            ubuntu@{{ app_private_ip }}:/home/ubuntu/schema.sql
+            ubuntu@{{ item }}:/home/ubuntu/schema.sql
+      loop: "{{ app_private_ips }}"
       # Copies directly from the cloned repo on the web instance
       # to the app instance over the internal VPC network
       # No internet involved at all
 
-    - name: SCP seed.sql to app instance
+    - name: SCP seed.sql to all app instances
       shell: |
         scp -i /home/ubuntu/.ssh/connect.pem \
             -o StrictHostKeyChecking=no \
             /app/database/seed.sql \
-            ubuntu@{{ app_private_ip }}:/home/ubuntu/seed.sql
+            ubuntu@{{ item }}:/home/ubuntu/seed.sql
+      loop: "{{ app_private_ips }}"
 
     - name: Pull backend image from Docker Hub
       community.docker.docker_image:
@@ -165,12 +167,13 @@
         group: ubuntu
         mode: '0644'
 
-    - name: SCP backend tar to app instance
+    - name: SCP backend tar to all app instances
       shell: |
         scp -i /home/ubuntu/.ssh/connect.pem \
             -o StrictHostKeyChecking=no \
             /tmp/backend.tar \
-            ubuntu@{{ app_private_ip }}:/tmp/backend.tar
+            ubuntu@{{ item }}:/tmp/backend.tar
+      loop: "{{ app_private_ips }}"
 
   handlers:
     - name: restart nginx
