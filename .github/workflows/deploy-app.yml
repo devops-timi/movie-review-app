@@ -54,6 +54,13 @@ jobs:
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/connect.pem
           chmod 600 ~/.ssh/connect.pem
 
+      - name: Add SSH key to agent
+        run: |
+          eval $(ssh-agent -s)
+          ssh-add ~/.ssh/connect.pem
+          echo "SSH_AUTH_SOCK=${SSH_AUTH_SOCK}" >> $GITHUB_ENV
+          echo "SSH_AGENT_PID=${SSH_AGENT_PID}" >> $GITHUB_ENV
+
       - name: Write Ansible inventory
         run: |
           {
@@ -73,9 +80,9 @@ jobs:
             echo "ansible_ssh_private_key_file=~/.ssh/connect.pem"
           } > ansible/inventory.ini
 
-          PROXY="ansible_ssh_common_args='-o StrictHostKeyChecking=no -o ProxyJump=ubuntu@${{ secrets.WEB_INSTANCE_IPS }}'"
+          PROXY="ansible_ssh_common_args='-o StrictHostKeyChecking=no -o ForwardAgent=yes -o ProxyJump=ubuntu@${{ secrets.WEB_INSTANCE_IPS }}'"
           WEB1=$(echo '${{ secrets.WEB_INSTANCE_IPS }}' | jq -r '.[0]')
-          echo "ansible_ssh_common_args='-o StrictHostKeyChecking=no -o ProxyJump=ubuntu@${WEB1}'" >> ansible/inventory.ini
+          echo "ansible_ssh_common_args='-o StrictHostKeyChecking=no -o ForwardAgent=yes -o ProxyJump=ubuntu@${WEB1}'" >> ansible/inventory.ini
 
           echo "Generated inventory:"
           cat ansible/inventory.ini
