@@ -82,7 +82,7 @@ jobs:
           cat > ansible/group_vars/all.yml << EOF
           repo_url: "https://github.com/${{ github.repository }}.git"
           ssh_private_key: "{{ lookup('env', 'SSH_PRIVATE_KEY') }}"
-          app_private_ips: "${{ secrets.APP_INSTANCE_IPS }}"
+          app_private_ips: ${{ secrets.APP_INSTANCE_IPS }}
           frontend_image: "${{ secrets.DOCKERHUB_USERNAME }}/movie-review-frontend:latest"
           backend_image: "${{ secrets.DOCKERHUB_USERNAME }}/movie-review-backend:latest"
           db_host: "${{ secrets.DB_HOST }}"
