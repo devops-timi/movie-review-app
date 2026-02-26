@@ -60,9 +60,14 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
-          gh secret set WEB_INSTANCE_IPS --body "${{ steps.tf.outputs.web_ips }}"
-          gh secret set APP_INSTANCE_IPS --body "${{ steps.tf.outputs.app_ips }}"
+          gh secret set WEB_INSTANCE_IPS --body '${{ steps.tf.outputs.web_ips }}'
+          gh secret set APP_INSTANCE_IPS --body '${{ steps.tf.outputs.app_ips }}'
           gh secret set DB_HOST          --body "${{ steps.tf.outputs.rds }}"
           gh secret set PUBLIC_CLB_DNS   --body "${{ steps.tf.outputs.pub_clb }}"
           gh secret set INTERNAL_CLB_DNS --body "${{ steps.tf.outputs.int_clb }}"
           gh secret set WEB_SG_ID        --body "${{ steps.tf.outputs.web_sg }}"
+
+      - name: Debug IPs
+        run: |
+          echo "WEB_IPS: ${{ secrets.WEB_INSTANCE_IPS }}"
+          echo "APP_IPS: ${{ secrets.APP_INSTANCE_IPS }}"
