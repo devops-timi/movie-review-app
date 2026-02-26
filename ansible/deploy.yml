@@ -91,6 +91,11 @@
         path: /etc/nginx/sites-enabled/default
         state: absent
       notify: restart nginx
+
+    - name: Reload Nginx 
+      systemd:
+        name: nginx
+        state: reloaded
       
     - name: Test Nginx configuration
       command: nginx -t
@@ -116,6 +121,7 @@
 
     - name: Start frontend with pm2
       shell: |
+        pm2 describe frontend > /dev/null 2>&1 && pm2 restart frontend || \
         cd /app/frontend && pm2 start npm --name frontend -- start
       
   handlers:
@@ -172,6 +178,7 @@
 
     - name: Start backend with pm2
       shell: |
+        pm2 describe backend > /dev/null 2>&1 && pm2 restart backend || \
         cd /app/backend && pm2 start src/server.js --name backend
       environment:
         PORT: "3010"
@@ -183,10 +190,6 @@
         DB_NAME: "{{ db_name }}"
         CORS_ORIGIN: "http://{{ public_clb_dns }}"
       
-
-    - name: Reset connection to apply group changes
-      ansible.builtin.meta: reset_connection
-    
 # ─────────────────────────────────────────────
 # DATABASE
 # Runs from the app instance → RDS
