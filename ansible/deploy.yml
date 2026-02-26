@@ -245,7 +245,7 @@
               -P {{ db_port }} \
               -u {{ db_user }} \
               -p{{ db_password }} \
-              {{ db_name }} < /home/ubuntu/seed.sql
+              {{ db_name }} < /app/database/seed.sql
 
     - name: Clean up
       file:
