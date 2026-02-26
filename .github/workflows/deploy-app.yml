@@ -56,6 +56,7 @@ jobs:
 
       - name: Write Ansible inventory
         run: |
+          WEB_IP=$(echo '${{ secrets.WEB_INSTANCE_IPS }}' | jq -r '.[0]')
           {
             echo "[web]"
             echo '${{ secrets.WEB_INSTANCE_IPS }}' | jq -r 'to_entries[] | "web-\(.key+1) ansible_host=\(.value)"'
@@ -73,8 +74,9 @@ jobs:
             echo "ansible_ssh_private_key_file=~/.ssh/connect.pem"
             echo "ansible_ssh_common_args='-o StrictHostKeyChecking=no -o ProxyJump=ubuntu@$(echo \$WEB_IPS | jq -r '.[0]')'"
           } > ansible/inventory.ini
-        env:
-          WEB_IPS: ${{ secrets.WEB_INSTANCE_IPS }}
+
+          echo "Generated inventory:"
+          cat ansible/inventory.ini
 
       - name: Write Ansible group_vars
         run: |
