@@ -138,7 +138,7 @@ jobs:
       # Step 4 — Remove the runner IP from the SG when done
       # The 'if: always()' means this runs even if Ansible fails
       - name: Remove runner IP from web SG
-        if: always() steps.ip.outputs.runner_ip != ''
+        if: always() && steps.ip.outputs.runner_ip != ''
         run: |
           aws ec2 revoke-security-group-ingress \
             --group-id ${{ secrets.WEB_SG_ID }} \
