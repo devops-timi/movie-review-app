@@ -18,6 +18,22 @@ resource "aws_internet_gateway" "this" {
 }
 
 # ────────────────────────────────────────────
+# NAT Gateway (app tier outbound internet)
+# ────────────────────────────────────────────
+resource "aws_eip" "nat" {
+  domain     = "vpc"
+  depends_on = [aws_internet_gateway.this]
+  tags       = { Name = "${var.project_name}-nat-eip" }
+}
+
+resource "aws_nat_gateway" "this" {
+  allocation_id = aws_eip.nat.id
+  subnet_id     = aws_subnet.web[0].id
+  depends_on    = [aws_internet_gateway.this]
+  tags          = { Name = "${var.project_name}-nat" }
+}
+
+# ────────────────────────────────────────────
 # Public Subnets — Web Tier (2 AZs)
 # ────────────────────────────────────────────
 resource "aws_subnet" "web" {
@@ -74,10 +90,16 @@ resource "aws_route_table_association" "web" {
   route_table_id = aws_route_table.public.id
 }
 
-# Private route table (App + DB — no internet route)
+# Private route table (App + DB — outbound via NAT)
 resource "aws_route_table" "private" {
   vpc_id = aws_vpc.this.id
-  tags   = { Name = "${var.project_name}-private-rt" }
+
+  route {
+    cidr_block     = "0.0.0.0/0"
+    nat_gateway_id = aws_nat_gateway.this.id
+  }
+
+  tags = { Name = "${var.project_name}-private-rt" }
 }
 
 resource "aws_route_table_association" "app" {

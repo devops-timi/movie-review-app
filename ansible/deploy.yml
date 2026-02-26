@@ -131,49 +131,12 @@
       # which reads it from the environment (GitHub secret)
       # mode 0600 = only owner can read — required by SSH
 
-    - name: SCP schema.sql to all app instances
-      shell: |
-        scp -i /home/ubuntu/.ssh/connect.pem \
-            -o StrictHostKeyChecking=no \
-            /app/database/schema.sql \
-            ubuntu@{{ item }}:/home/ubuntu/schema.sql
-      loop: "{{ app_private_ips }}"
       # Copies directly from the cloned repo on the web instance
       # to the app instance over the internal VPC network
       # No internet involved at all
 
-    - name: SCP seed.sql to all app instances
-      shell: |
-        scp -i /home/ubuntu/.ssh/connect.pem \
-            -o StrictHostKeyChecking=no \
-            /app/database/seed.sql \
-            ubuntu@{{ item }}:/home/ubuntu/seed.sql
-      loop: "{{ app_private_ips }}"
-
-    - name: Pull backend image from Docker Hub
-      community.docker.docker_image:
-        name: "{{ backend_image }}"
-        source: pull
+    
       # Web instance pulls the backend image since it has internet
-
-    - name: Save backend image as tar
-      shell: |
-        docker save {{ backend_image }} -o /tmp/backend.tar
-
-    - name: Set permissions on tar file
-      file:
-        path: /tmp/backend.tar
-        owner: ubuntu
-        group: ubuntu
-        mode: '0644'
-
-    - name: SCP backend tar to all app instances
-      shell: |
-        scp -i /home/ubuntu/.ssh/connect.pem \
-            -o StrictHostKeyChecking=no \
-            /tmp/backend.tar \
-            ubuntu@{{ item }}:/tmp/backend.tar
-      loop: "{{ app_private_ips }}"
 
   handlers:
     - name: restart nginx
@@ -196,14 +159,11 @@
       apt:
         update_cache: yes
 
-    - name: Install mysql-client
-      apt:
-        name: mysql-client
-        state: present
-  
-    - name: Install Docker
+    - name: Install Docker and MySQL
       apt:
         name:
+          - mysql-client
+          - git
           - docker.io
         state: present
 
@@ -219,11 +179,13 @@
         state: started
         enabled: true
 
-    - name: Load backend image from tar
-      shell: |
-        docker load -i /tmp/backend.tar
-      # Reads the tar file SCP'd from the web instance
-      # and loads it into Docker as a proper image
+    - name: Reset connection to apply group changes
+      ansible.builtin.meta: reset_connection
+
+    - name: Pull backend image from Docker Hub
+      community.docker.docker_image:
+        name: "{{ backend_image }}"
+        source: pull
 
     - name: Run backend container
       community.docker.docker_container:
@@ -242,24 +204,28 @@
           DB_PASSWORD: "{{ db_password }}"
           DB_NAME: "{{ db_name }}"
           CORS_ORIGIN: "http://{{ public_clb_dns }}"
-
-    - name: Clean up tar file
+    
+    - name: Clean up cloned repo
       file:
-        path: /tmp/backend.tar
+        path: /app
         state: absent
-      loop:
-        - /tmp/backend.tar
-        - /home/ubuntu/.ssh/connect.pem
 # ─────────────────────────────────────────────
 # DATABASE
 # Runs from the app instance → RDS
 # SQL files were SCP'd here from the web instance
 # ─────────────────────────────────────────────
 - name: Import database
-  hosts: app
+  hosts: app[0]
   become: true
 
   tasks:
+
+    - name: Clone repository for SQL files
+      git:
+        repo: "{{ repo_url }}"
+        dest: /app
+        version: main
+        force: yes
 
     - name: Import schema into RDS
       shell: |
@@ -267,7 +233,8 @@
               -P {{ db_port }} \
               -u {{ db_user }} \
               -p{{ db_password }} \
-              {{ db_name }} < /home/ubuntu/schema.sql
+              {{ db_name }} < /app/database/schema.sql
+
       # Runs ON the app instance
       # App instance SG is allowed through DB SG on port 3306
       # mysql reads each line of schema.sql and executes it against RDS
@@ -280,10 +247,7 @@
               -p{{ db_password }} \
               {{ db_name }} < /home/ubuntu/seed.sql
 
-    - name: Clean up SQL files
+    - name: Clean up
       file:
-        path: "{{ item }}"
+        path: /app
         state: absent
-      loop:
-        - /home/ubuntu/schema.sql
-        - /home/ubuntu/seed.sql
