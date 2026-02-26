@@ -163,7 +163,7 @@
 
     - name: Install backend dependencies
       shell: cd /app/backend && npm install --omit=dev
-      become_user: ubuntu
+      
 
     - name: Install pm2
       shell: npm install -g pm2
@@ -182,7 +182,7 @@
         DB_PASSWORD: "{{ db_password }}"
         DB_NAME: "{{ db_name }}"
         CORS_ORIGIN: "http://{{ public_clb_dns }}"
-      become_user: ubuntu
+      
 
     - name: Reset connection to apply group changes
       ansible.builtin.meta: reset_connection
