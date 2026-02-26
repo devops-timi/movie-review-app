@@ -97,27 +97,28 @@
       register: nginx_test
       changed_when: false
 
-    # ── Send SQL files to app instance ───────────
-    # Web instance cloned the repo so it has the SQL files
-    # App instance has no internet so it can't clone itself
-    # We SCP just the two SQL files across the internal network
+    - name: Install frontend dependencies
+      shell: |
+        cd /app/frontend && npm install
+      become_user: ubuntu
 
-    - name: Copy SSH key to web instance
-      copy:
-        content: "{{ ssh_private_key }}"
-        dest: /home/ubuntu/.ssh/connect.pem
-        owner: ubuntu
-        mode: '0600'
-      # ssh_private_key comes from group_vars/all.yml
-      # which reads it from the environment (GitHub secret)
-      # mode 0600 = only owner can read — required by SSH
+    - name: Build frontend
+      shell: |
+        cd /app/frontend && npm run build
+      environment:
+        NEXT_PUBLIC_API_URL: "http://{{ internal_clb_dns }}:3010"
+      become_user: ubuntu
 
-      # Copies directly from the cloned repo on the web instance
-      # to the app instance over the internal VPC network
-      # No internet involved at all
+    - name: Install pm2
+      shell: npm install -g pm2
+      args:
+        creates: /usr/bin/pm2
 
-    
-      # Web instance pulls the backend image since it has internet
+    - name: Start frontend with pm2
+      shell: |
+        cd /app/frontend && pm2 start npm --name frontend -- start
+      become_user: ubuntu
+
 
   handlers:
     - name: restart nginx
@@ -140,7 +141,7 @@
       apt:
         update_cache: yes
 
-    - name: Install Docker and MySQL
+    - name: Install MySQL
       apt:
         name:
           - mysql-client
@@ -155,13 +156,39 @@
       args:
         creates: /usr/bin/node
 
+    - name: Clone repository
+      git:
+        repo: "{{ repo_url }}"
+        dest: /app
+        version: main
+        force: yes
+
+    - name: Install backend dependencies
+      shell: cd /app/backend && npm install --omit=dev
+      become_user: ubuntu
+
+    - name: Install pm2
+      shell: npm install -g pm2
+      args:
+        creates: /usr/bin/pm2
+
+    - name: Start backend with pm2
+      shell: |
+        cd /app/backend && pm2 start src/server.js --name backend
+      environment:
+        PORT: "3010"
+        NODE_ENV: "production"
+        DB_HOST: "{{ db_host }}"
+        DB_PORT: "{{ db_port }}"
+        DB_USER: "{{ db_user }}"
+        DB_PASSWORD: "{{ db_password }}"
+        DB_NAME: "{{ db_name }}"
+        CORS_ORIGIN: "http://{{ public_clb_dns }}"
+      become_user: ubuntu
+
     - name: Reset connection to apply group changes
       ansible.builtin.meta: reset_connection
     
-    - name: Clean up cloned repo
-      file:
-        path: /app
-        state: absent
 # ─────────────────────────────────────────────
 # DATABASE
 # Runs from the app instance → RDS

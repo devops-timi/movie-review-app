@@ -14,7 +14,6 @@ jobs:
         run: |
           sudo apt update
           sudo apt install -y ansible
-          ansible-galaxy collection install community.docker
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -64,18 +63,17 @@ jobs:
       - name: Write Ansible group_vars
         run: |
           mkdir -p ansible/group_vars
-          cat > ansible/group_vars/all.yml << EOF
-          repo_url: "https://github.com/${{ github.repository }}.git"
-          ssh_private_key: "{{ lookup('env', 'SSH_PRIVATE_KEY') }}"
-          app_private_ips: ${{ secrets.APP_INSTANCE_IPS }}
-          db_host: "${{ secrets.DB_HOST }}"
-          db_port: "3306"
-          db_name: "movie_reviews"
-          db_user: "${{ secrets.DB_USERNAME }}"
-          db_password: "{{ lookup('env', 'DB_PASSWORD') }}"
-          internal_clb_dns: "${{ secrets.INTERNAL_CLB_DNS }}"
-          public_clb_dns: "${{ secrets.PUBLIC_CLB_DNS }}"
-          EOF
+          {
+            echo 'repo_url: "https://github.com/${{ github.repository }}.git"'
+            echo 'app_private_ips: ${{ secrets.APP_INSTANCE_IPS }}'
+            echo 'db_host: "${{ secrets.DB_HOST }}"'
+            echo 'db_port: "3306"'
+            echo 'db_name: "movie_reviews"'
+            echo 'db_user: "${{ secrets.DB_USERNAME }}"'
+            echo 'db_password: "{{ lookup('"'"'env'"'"', '"'"'DB_PASSWORD'"'"') }}"'
+            echo 'internal_clb_dns: "${{ secrets.INTERNAL_CLB_DNS }}"'
+            echo 'public_clb_dns: "${{ secrets.PUBLIC_CLB_DNS }}"'
+          } > ansible/group_vars/all.yml
 
 
       # Step 1 — Get the runner's current public IP
@@ -103,7 +101,6 @@ jobs:
         run: |
           ansible-playbook -i ansible/inventory.ini ansible/deploy.yml
         env:
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           ANSIBLE_HOST_KEY_CHECKING: "False"
           
