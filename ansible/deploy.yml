@@ -67,6 +67,12 @@
     - name: Reset connection to apply group changes
       ansible.builtin.meta: reset_connection
 
+    - name: Update nginx upstream with internal CLB DNS
+      replace:
+        path: /app/nginx/nginx.conf
+        regexp: 'server 127.0.0.1:3010'
+        replace: 'server {{ internal_clb_dns }}:3010'
+
     - name: Copy nginx config from cloned repo
       copy:
         src: /app/nginx/nginx.conf
