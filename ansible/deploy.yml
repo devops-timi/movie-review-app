@@ -121,7 +121,7 @@
 
     - name: Start frontend with pm2
       shell: |
-        pm2 describe frontend > /dev/null 2>&1 && pm2 restart frontend || \
+        pm2 delete frontend 2>/dev/null || true
         cd /app/frontend && pm2 start npm --name frontend -- start
       
   handlers:
@@ -178,7 +178,7 @@
 
     - name: Start backend with pm2
       shell: |
-        pm2 describe backend > /dev/null 2>&1 && pm2 restart backend || \
+        pm2 delete backend 2>/dev/null || true
         cd /app/backend && pm2 start src/server.js --name backend
       environment:
         PORT: "3010"
