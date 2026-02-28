@@ -67,12 +67,12 @@ jobs:
           mkdir -p ansible/group_vars
           {
             echo 'repo_url: "https://github.com/${{ github.repository }}.git"'
-            echo 'app_private_ips: ${{ secrets.APP_INSTANCE_IPS }}'
+            echo 'app_private_ips: "${{ secrets.APP_INSTANCE_IPS }}"'
             echo 'db_host: "${{ secrets.DB_HOST }}"'
             echo 'db_port: "3306"'
             echo 'db_name: "movie_reviews"'
             echo 'db_user: "${{ secrets.DB_USERNAME }}"'
-            echo 'db_password: "${{ secrets.DB_PASSWORD') }}"'
+            echo 'db_password: "${{ secrets.DB_PASSWORD }}"'
             echo 'internal_clb_dns: "${{ secrets.INTERNAL_CLB_DNS }}"'
             echo 'public_clb_dns: "${{ secrets.PUBLIC_CLB_DNS }}"'
           } > ansible/group_vars/all.yml
