@@ -39,7 +39,7 @@
     
     - name: Render Nginx config from template
       template:
-        src: ../nginx/nginx.conf.template
+        src: "{{ playbook_dir }}/../nginx/nginx.conf.template"
         dest: /etc/nginx/sites-available/movie-review
         owner: root
         group: root
