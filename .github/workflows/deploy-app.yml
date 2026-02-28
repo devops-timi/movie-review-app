@@ -104,6 +104,7 @@ jobs:
           ansible-playbook -i ansible/inventory.ini ansible/deploy.yml
         env:
           ANSIBLE_HOST_KEY_CHECKING: "False"
+          INTERNAL_CLB_DNS: "${{ secrets.INTERNAL_CLB_DNS }}"
         # ProxyJump is configured in inventory.ini
         # Runner → Web EC2 → App EC2
 

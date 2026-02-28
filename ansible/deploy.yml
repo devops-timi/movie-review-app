@@ -37,14 +37,20 @@
       # version: main means the main branch
       # repo_url comes from group_vars/all.yml
     
-    - name: Render Nginx config from template
-      template:
-        src: "{{ playbook_dir }}/../nginx/nginx.conf.template"
+    - name: Copy nginx config
+      copy:
+        src: /app/nginx/nginx.conf.template
         dest: /etc/nginx/sites-available/movie-review
+        remote_src: yes
         owner: root
         group: root
         mode: '0644'
-        remote_src: yes
+
+    - name: Replace CLB DNS in nginx config
+      replace:
+        path: /etc/nginx/sites-available/movie-review
+        regexp: 'INTERNAL_CLB_PLACEHOLDER'
+        replace: '{{ internal_clb_dns }}'
       notify: restart nginx
 
     - name: Enable nginx site

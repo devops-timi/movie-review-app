@@ -19,7 +19,7 @@ server {
 
     # Proxy API requests to Node.js backend
     location /api/ {
-        proxy_pass http://{{ internal_clb_dns }}:3010/;
+        proxy_pass http://INTERNAL_CLB_PLACEHOLDER:3010/;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
