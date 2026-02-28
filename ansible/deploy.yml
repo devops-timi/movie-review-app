@@ -39,13 +39,13 @@
     
     - name: Render Nginx config from template
       template:
-        src: nginx/nginx.conf.template
+        src: /app/ansible/nginx/nginx.conf.template
         dest: /etc/nginx/sites-available/movie-review
         owner: root
         group: root
         mode: '0644'
       vars:
-        internal_clb_dns: "{{ lookup('env','INTERNAL_CLB_DNS') }}"
+        internal_clb_dns: "{{ internal_clb_dns }}"
       notify: restart nginx
 
     - name: Enable nginx site
