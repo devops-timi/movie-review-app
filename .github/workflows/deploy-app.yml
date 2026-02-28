@@ -3,9 +3,9 @@ on:
   workflow_dispatch:
 
 jobs:
-
   deploy:
     runs-on: ubuntu-latest
+    needs: terraform
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -60,7 +60,10 @@ jobs:
           echo "Generated inventory:"
           cat ansible/inventory.ini
 
+    
       - name: Write Ansible group_vars
+        env:
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
         run: |
           mkdir -p ansible/group_vars
           {
@@ -70,7 +73,7 @@ jobs:
             echo 'db_port: "3306"'
             echo 'db_name: "movie_reviews"'
             echo 'db_user: "${{ secrets.DB_USERNAME }}"'
-            echo 'db_password: "{{ lookup('"'"'env'"'"', '"'"'DB_PASSWORD'"'"') }}"'
+            echo 'db_password: "${{ secrets.DB_PASSWORD') }}"'
             echo 'internal_clb_dns: "${{ secrets.INTERNAL_CLB_DNS }}"'
             echo 'public_clb_dns: "${{ secrets.PUBLIC_CLB_DNS }}"'
           } > ansible/group_vars/all.yml
@@ -101,9 +104,7 @@ jobs:
         run: |
           ansible-playbook -i ansible/inventory.ini ansible/deploy.yml
         env:
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           ANSIBLE_HOST_KEY_CHECKING: "False"
-          
         # ProxyJump is configured in inventory.ini
         # Runner → Web EC2 → App EC2
 

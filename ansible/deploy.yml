@@ -8,29 +8,16 @@
   become: yes
 
   tasks:
-    - name: Update apt cache
+    
+    - name: Update and Install required packages
       apt:
         update_cache: yes
-        cache_valid_time: 3600  # Optional: skip if updated in the last hour
-    
-    - name: Install required packages
-      apt:
         name:
           - nginx
           - unzip       # needed for awscli zip
           - curl   
           - git     # needed to download awscli
         state: present
-
-    - name: Install AWS CLI v2 if not present
-      shell: |
-        curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-        unzip awscliv2.zip
-        ./aws/install
-        rm -rf awscliv2.zip aws
-        aws --version
-      args:
-        creates: /usr/local/bin/aws
 
     - name: Install Node.js 20
       shell: |
@@ -50,35 +37,17 @@
       # version: main means the main branch
       # repo_url comes from group_vars/all.yml
     
-    - name: Ensure Nginx is started and enabled
-      systemd:
-        name: nginx
-        state: started
-        enabled: yes
-    
-    - name: Reset connection to apply group changes
-      ansible.builtin.meta: reset_connection
-
-    - name: Update nginx upstream with internal CLB DNS
-      replace:
-        path: /app/nginx/nginx.conf
-        regexp: 'server 127.0.0.1:3010'
-        replace: 'server {{ internal_clb_dns }}:3010'
-
-    - name: Copy nginx config from cloned repo
-      copy:
-        src: /app/nginx/nginx.conf
+    - name: Render Nginx config from template
+      template:
+        src: nginx/nginx.conf.template
         dest: /etc/nginx/sites-available/movie-review
-        remote_src: yes
         owner: root
         group: root
         mode: '0644'
-      # remote_src: yes means the src path is on the remote instance
-      # not on your laptop or the runner
-      # It copies from /app/nginx/nginx.conf (cloned from repo)
-      # to where nginx expects it
+      vars:
+        internal_clb_dns: "{{ lookup('env','INTERNAL_CLB_DNS') }}"
       notify: restart nginx
-      
+
     - name: Enable nginx site
       file:
         src: /etc/nginx/sites-available/movie-review
@@ -92,28 +61,24 @@
         state: absent
       notify: restart nginx
 
-    - name: Reload Nginx 
-      systemd:
-        name: nginx
-        state: reloaded
-      
     - name: Test Nginx configuration
       command: nginx -t
       register: nginx_test
       changed_when: false
 
+    - name: Ensure Nginx is started and enabled
+      systemd:
+        name: nginx
+        state: started
+        enabled: yes    
+
     - name: Install frontend dependencies
       shell: |
         cd /app/frontend && npm install
-      
 
     - name: Build frontend
       shell: |
-        export NEXT_PUBLIC_API_URL="http://{{ internal_clb_dns }}:3010"
         cd /app/frontend && npm run build
-      environment:
-        NEXT_PUBLIC_API_URL: "http://{{ internal_clb_dns }}:3010"
-      
 
     - name: Install pm2
       shell: npm install -g pm2
@@ -141,13 +106,10 @@
   become: true
 
   tasks:
-
-    - name: Update apt cache
-      apt:
-        update_cache: yes
-
+        
     - name: Install MySQL
       apt:
+        update_cache: yes
         name:
           - mysql-client
           - git
@@ -177,37 +139,27 @@
       args:
         creates: /usr/bin/pm2
 
-    - name: Start backend with pm2
-      shell: |
-        pm2 delete backend 2>/dev/null || true
-        cd /app/backend && pm2 start src/server.js --name backend
-      environment:
-        PORT: "3010"
-        NODE_ENV: "production"
-        DB_HOST: "{{ db_host }}"
-        DB_PORT: "{{ db_port }}"
-        DB_USER: "{{ db_user }}"
-        DB_PASSWORD: "{{ db_password }}"
-        DB_NAME: "{{ db_name }}"
-        CORS_ORIGIN: "http://{{ public_clb_dns }}"
+    - name: Create backend .env
+      copy:
+        dest: /app/backend/.env
+        content: |
+          PORT=3010
+          NODE_ENV=production
+          DB_HOST={{ db_host }}
+          DB_PORT=3306
+          DB_USER={{ db_user }}
+          DB_PASSWORD={{ db_password }}
+          DB_NAME=movie_reviews
+          CORS_ORIGIN=http://{{ public_clb_dns }}
+        owner: ubuntu
+        group: ubuntu
+        mode: '0600'
       
 # ─────────────────────────────────────────────
 # DATABASE
 # Runs from the app instance → RDS
 # SQL files were SCP'd here from the web instance
 # ─────────────────────────────────────────────
-- name: Import database
-  hosts: app[0]
-  become: true
-
-  tasks:
-
-    - name: Clone repository for SQL files
-      git:
-        repo: "{{ repo_url }}"
-        dest: /app
-        version: main
-        force: yes
 
     - name: Import schema into RDS
       shell: |
@@ -231,7 +183,10 @@
               -p{{ db_password }} \
               {{ db_name }} < /app/database/seed.sql
 
-    - name: Clean up
-      file:
-        path: /app
-        state: absent
+    - name: Start backend with pm2
+      shell: |
+        pm2 delete backend 2>/dev/null || true
+        cd /app/backend && pm2 start src/server.js --name backend
+      args:
+        chdir: /app/backend
+      

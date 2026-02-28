@@ -6,8 +6,8 @@ const PORT = parseInt(process.env.PORT, 10) || 3010;
 
 async function start() {
   await testConnection();
-  app.listen(PORT, () => {
-    console.log(`🎬 Movie Review API running on http://localhost:${PORT}`);
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🎬 Movie Review API running on http://0.0.0.0:${PORT}`);
     console.log(`   Environment: ${process.env.NODE_ENV || 'development'}`);
   });
 }

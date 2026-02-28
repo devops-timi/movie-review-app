@@ -30,8 +30,6 @@ jobs:
       - name: Terraform Init
         run: terraform init
 
-
-
       - name: Terraform Plan
         run: terraform plan 
         env:
@@ -60,3 +58,19 @@ jobs:
       - name: Debug IPs
         run: |
           echo '${{ secrets.WEB_INSTANCE_IPS }}' | od -c | head
+
+  terraform:
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Generate Nginx Config
+        env: 
+          INTERNAL_CLB_DNS: ${{ SECRETS.INTERNAL_CLB_DNS }}
+        run: |
+          envsubst '${INTERNAL_CLB_DNS}' < nginx/nginx.conf.template > nginx/nginx.conf
+    
+      
