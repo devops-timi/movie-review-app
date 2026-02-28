@@ -44,6 +44,7 @@
         owner: root
         group: root
         mode: '0644'
+        remote_src: yes
       vars:
         internal_clb_dns: "{{ internal_clb_dns }}"
       notify: restart nginx
