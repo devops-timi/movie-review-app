@@ -71,7 +71,8 @@ jobs:
             sudo npm install
             sudo npm run build
             pm2 delete frontend 2>/dev/null || true
-            pm2 start npm --name frontend -- start
+            pm2 start /app/frontend/.next/standalone/server.js --name frontend
+            pm2 logs frontend --lines 20
           '
 
           for HOST in $WEB_IPS; do
