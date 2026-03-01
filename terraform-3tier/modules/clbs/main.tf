@@ -16,7 +16,7 @@ resource "aws_elb" "public" {
   }
 
   health_check {
-    target              = "HTTP:80/"
+    target              = "HTTP:80/health"
     healthy_threshold   = 2
     unhealthy_threshold = 3
     interval            = 30
