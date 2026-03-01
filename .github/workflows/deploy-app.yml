@@ -17,9 +17,6 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Install jq
-        run: sudo apt install -y jq
-
       - name: Write SSH key to disk
         run: |
           mkdir -p ~/.ssh
@@ -48,111 +45,74 @@ jobs:
       - name: Configure web instances
         run: |
           WEB_IPS=$(echo '${{ secrets.WEB_INSTANCE_IPS }}' | jq -r '.[]')
+          INTERNAL_CLB="${{ secrets.INTERNAL_CLB_DNS }}"
+          REPO="https://github.com/${{ github.repository }}.git"
+
+          WEB_SCRIPT='
+            set -e
+            sudo apt update -y
+            sudo apt install -y git nginx curl
+            curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+            sudo apt install -y nodejs
+            sudo npm install -g pm2
+            if [ ! -d /app ]; then
+              sudo git clone '"$REPO"' /app
+            else
+              cd /app && sudo git pull origin main
+            fi
+            sudo cp /app/nginx/nginx.conf /etc/nginx/sites-available/movie-review
+            sudo sed -i "s|INTERNAL_CLB_PLACEHOLDER|'"$INTERNAL_CLB"'|g" /etc/nginx/sites-available/movie-review
+            sudo ln -sf /etc/nginx/sites-available/movie-review /etc/nginx/sites-enabled/movie-review
+            sudo rm -f /etc/nginx/sites-enabled/default
+            sudo nginx -t
+            sudo systemctl enable nginx
+            sudo systemctl restart nginx
+            cd /app/frontend
+            sudo npm install
+            sudo npm run build
+            pm2 delete frontend 2>/dev/null || true
+            pm2 start npm --name frontend -- start
+          '
 
           for HOST in $WEB_IPS; do
-            ssh -o StrictHostKeyChecking=no ubuntu@$HOST bash << EOF
-              set -e
-
-              # Install packages
-              sudo apt update -y
-              sudo apt install -y git nginx curl
-
-              # Install Node.js 20
-              curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-              sudo apt install -y nodejs
-
-              # Install pm2
-              sudo npm install -g pm2
-
-              # Clone or update repo
-              if [ ! -d "/app" ]; then
-                sudo git clone https://github.com/${{ github.repository }}.git /app
-              else
-                cd /app && sudo git pull origin main
-              fi
-
-              # Configure nginx
-              sudo cp /app/nginx/nginx.conf /etc/nginx/sites-available/movie-review
-              sudo sed -i "s|INTERNAL_CLB_PLACEHOLDER|${{ secrets.INTERNAL_CLB_DNS }}|g" /etc/nginx/sites-available/movie-review
-              sudo ln -sf /etc/nginx/sites-available/movie-review /etc/nginx/sites-enabled/movie-review
-              sudo rm -f /etc/nginx/sites-enabled/default
-              sudo nginx -t
-              sudo systemctl enable nginx
-              sudo systemctl restart nginx
-
-              # Install and build frontend
-              cd /app/frontend
-              sudo npm install
-              sudo npm run build
-
-              # Start frontend
-              pm2 delete frontend 2>/dev/null || true
-              pm2 start npm --name frontend -- start
-            EOF
+            ssh -o StrictHostKeyChecking=no ubuntu@$HOST bash -s <<< "$WEB_SCRIPT"
           done
 
       - name: Configure app instances
         run: |
           WEB_IP=$(echo '${{ secrets.WEB_INSTANCE_IPS }}' | jq -r '.[0]')
           APP_IPS=$(echo '${{ secrets.APP_INSTANCE_IPS }}' | jq -r '.[]')
+          REPO="https://github.com/${{ github.repository }}.git"
+          DB_HOST="${{ secrets.DB_HOST }}"
+          DB_USER="${{ secrets.DB_USERNAME }}"
+          DB_PASS="${{ secrets.DB_PASSWORD }}"
+          PUBLIC_CLB="${{ secrets.PUBLIC_CLB_DNS }}"
+
+          APP_SCRIPT='
+            set -e
+            sudo apt update -y
+            sudo apt install -y git curl mysql-client
+            curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+            sudo apt install -y nodejs
+            sudo npm install -g pm2
+            if [ ! -d /app ]; then
+              sudo git clone '"$REPO"' /app
+            else
+              cd /app && sudo git pull origin main
+            fi
+            printf "PORT=3010\nNODE_ENV=production\nDB_HOST='"$DB_HOST"'\nDB_PORT=3306\nDB_USER='"$DB_USER"'\nDB_PASSWORD='"$DB_PASS"'\nDB_NAME=movie_reviews\nCORS_ORIGIN=http://'"$PUBLIC_CLB"'\n" | sudo tee /app/backend/.env > /dev/null
+            mysql --force -h '"$DB_HOST"' -u '"$DB_USER"' -p'"$DB_PASS"' movie_reviews < /app/database/schema.sql
+            mysql --force -h '"$DB_HOST"' -u '"$DB_USER"' -p'"$DB_PASS"' movie_reviews < /app/database/seed.sql
+            cd /app/backend
+            sudo npm install --omit=dev
+            pm2 delete backend 2>/dev/null || true
+            pm2 start src/server.js --name backend
+          '
 
           for APP in $APP_IPS; do
             ssh -o StrictHostKeyChecking=no \
                 -o ProxyJump=ubuntu@$WEB_IP \
-                ubuntu@$APP bash << EOF
-              set -e
-
-              # Install packages
-              sudo apt update -y
-              sudo apt install -y git curl mysql-client
-
-              # Install Node.js 20
-              curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-              sudo apt install -y nodejs
-
-              # Install pm2
-              sudo npm install -g pm2
-
-              # Clone or update repo
-              if [ ! -d "/app" ]; then
-                sudo git clone https://github.com/${{ github.repository }}.git /app
-              else
-                cd /app && sudo git pull origin main
-              fi
-
-              # Write .env file
-              sudo tee /app/backend/.env > /dev/null << ENVEOF
-              PORT=3010
-              NODE_ENV=production
-              DB_HOST=${{ secrets.DB_HOST }}
-              DB_PORT=3306
-              DB_USER=${{ secrets.DB_USERNAME }}
-              DB_PASSWORD=${{ secrets.DB_PASSWORD }}
-              DB_NAME=movie_reviews
-              CORS_ORIGIN=http://${{ secrets.PUBLIC_CLB_DNS }}
-              ENVEOF
-
-              # Import database
-              mysql --force \
-                -h ${{ secrets.DB_HOST }} \
-                -u ${{ secrets.DB_USERNAME }} \
-                -p${{ secrets.DB_PASSWORD }} \
-                movie_reviews < /app/database/schema.sql
-
-              mysql --force \
-                -h ${{ secrets.DB_HOST }} \
-                -u ${{ secrets.DB_USERNAME }} \
-                -p${{ secrets.DB_PASSWORD }} \
-                movie_reviews < /app/database/seed.sql
-
-              # Install backend dependencies
-              cd /app/backend
-              sudo npm install --omit=dev
-
-              # Start backend
-              pm2 delete backend 2>/dev/null || true
-              pm2 start src/server.js --name backend
-            EOF
+                ubuntu@$APP bash -s <<< "$APP_SCRIPT"
           done
 
       - name: Remove runner IP from web SG
