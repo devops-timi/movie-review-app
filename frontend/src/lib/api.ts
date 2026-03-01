@@ -1,4 +1,7 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
+const isServer = typeof window === 'undefined';
+const API_BASE = isServer 
+  ? 'http://127.0.0.1' 
+  : '';
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
